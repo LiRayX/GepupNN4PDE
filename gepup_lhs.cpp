@@ -58,6 +58,9 @@
 #include <deal.II/lac/solver_minres.h>
 
 using namespace dealii;
+std::ifstream file("parameters.txt");
+std::string name;
+double value;
 
 const unsigned int finite_element_degree = 4; // 单元阶数
 const unsigned int dimension = 2;             // 问题维数
@@ -69,6 +72,7 @@ const double gamma_coef = 0.25; // 时间积分的参数，不能改
 unsigned int timestep_number = 0; // 初始时间步，0步
 double time_end = 1;              // 终止时间
 double time_step = 0.001;         // 时间步长
+double parameter = 1.0;                // 速度值
 
 template <int dim>
 class MultiComponentFunction : public Function<dim>
@@ -224,7 +228,7 @@ public:
         (void) p;
         double epsilon = 1e-12;
         if (this->comp == 0 && fabs(1 - p(1)) < epsilon)
-            return 1;
+            return parameter;
         else
             return 0;
     }
@@ -248,7 +252,7 @@ public:
         (void) p;
         double epsilon = 1e-12;
         if (this->comp == 0 && fabs(1 - p(1)) < epsilon)
-            return 1;
+            return parameter;
         else
             return 0;
     }
@@ -2365,34 +2369,40 @@ void GePUP<dim>::output_image(std::string file_name, unsigned int output_count, 
     data_out.build_patches(mapping, fe.degree, DataOut<dim>::curved_inner_cells);
     // data_out.build_patches();
     // data_out.write_vtu_with_pvtu_record(file_name, "image", output_count, mpi_communicator, 4, 1);
-    std::string filename = file_name + "timestep_" + Utilities::int_to_string(output_count, 4) + "_realtime_" + std::to_string(current_time) + ".vtu";
-    std::ofstream output(filename);
-    data_out.write_vtu(output);
+    std::string filename = file_name + "realtime_" + std::to_string(current_time);
+    // std::ofstream output(filename);
+    // data_out.write_vtu(output, mpi_communicator, 4, 1);
+    data_out.write_vtu_with_pvtu_record(filename, "_timestep", output_count, mpi_communicator, 4, 1);
 }
 
 template <int dim>
 void GePUP<dim>::run()
 {
     // double max_cfl_number = 0;
-
+    std::string output_image_name = "2D-NS/"; // 图片文件名称
     make_grid();
     setup_dofs();
     initialize_u();
     pcout << "time step 0" << std::endl;
     print_error();
-    // output_image("Sphere_Re3200_t0001_conform_refine3/", timestep_number);
+    output_image(output_image_name, 0, 0);
 
     // double current_cfl_number = get_cfl_number();
     // max_cfl_number = std::max(max_cfl_number, current_cfl_number);
     // pcout << "current Cr number: " << current_cfl_number * time_step << std::endl;
     // pcout << "current max Cr number: " << max_cfl_number * time_step << std::endl;
-
+    double time_output = 0.1;
     while (time < time_end + 1e-12)
     {
         ++timestep_number;
         pcout << "time step " << timestep_number << std::endl;
         run_once();
         time += time_step;
+        if (time >= time_output)
+        {
+            output_image(output_image_name, timestep_number, time);
+            time_output += 0.1;
+        }
         // if (timestep_number % 20 == 0)
         //     output_image("Sphere_Re3200_t0001_conform_refine3/", timestep_number);
         print_error();
@@ -2507,7 +2517,7 @@ int main(int argc, char **argv)
         n_global_refine = atoi(argv[1]);
     Utilities::MPI::MPI_InitFinalize mpi_initialization(argc, argv, 1);
     GePUP<dimension> gepup(n_global_refine);
-    // gepup.run();
-    gepup.run_adaptive();
+    gepup.run();
+    // gepup.run_adaptive();
     return 0;
 }
