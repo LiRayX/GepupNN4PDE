@@ -52,6 +52,7 @@
 #include <fstream>
 #include <iostream>
 #include <chrono>
+#include <filesystem>
 
 #include <deal.II/numerics/matrix_tools.h>
 #include <deal.II/lac/solver_gmres.h>
@@ -72,7 +73,21 @@ const double gamma_coef = 0.25; // 时间积分的参数，不能改
 unsigned int timestep_number = 0; // 初始时间步，0步
 double time_end = 1;              // 终止时间
 double time_step = 0.001;         // 时间步长
-double parameter = 1.0;                // 速度值
+double parameter = 1.0;                // 默认速度值
+
+struct ParameterReader {
+    ParameterReader() {
+        std::ifstream file("parameters.txt");
+        std::string name;
+        double value;
+
+        while (file >> name >> value)
+        {
+            if (name == "parameter")
+                parameter = value;
+        }
+    }
+} parameterReader; // 创建一个ParameterReader对象，这将执行构造函数中的代码
 
 template <int dim>
 class MultiComponentFunction : public Function<dim>
@@ -2379,13 +2394,43 @@ template <int dim>
 void GePUP<dim>::run()
 {
     // double max_cfl_number = 0;
-    std::string output_image_name = "2D-NS/"; // 图片文件名称
+    std::string parentDir = "2D-NS/"; // 图片文件名称
+    std::string outputDir = parentDir + "parameter_" + std::to_string(parameter) + "/"; 
+
+    std::filesystem::path parentPath(parentDir);
+    std::filesystem::path outputPath(outputDir);
+    try {
+            // Check if the parent directory exists, if not, create it
+            if (!std::filesystem::exists(parentPath)) {
+                if (std::filesystem::create_directories(parentPath)) {
+                    std::cout << "Parent directory " << parentDir << " created successfully." << std::endl;
+                } else {
+                    std::cerr << "Failed to create parent directory " << parentDir << "." << std::endl;
+                }
+            } else {
+                std::cout << "Parent directory " << parentDir << " already exists." << std::endl;
+            }
+
+            // Check if the output directory exists, if not, create it
+            if (!std::filesystem::exists(outputPath)) {
+                if (std::filesystem::create_directories(outputPath)) {
+                    std::cout << "Output directory " << outputDir << " created successfully." << std::endl;
+                } else {
+                    std::cerr << "Failed to create output directory " << outputDir << "." << std::endl;
+                }
+            } else {
+                std::cout << "Output directory " << outputDir << " already exists." << std::endl;
+            }
+        } catch (const std::filesystem::filesystem_error& e) {
+            std::cerr << "Filesystem error: " << e.what() << std::endl;
+        }
+
     make_grid();
     setup_dofs();
     initialize_u();
     pcout << "time step 0" << std::endl;
     print_error();
-    output_image(output_image_name, 0, 0);
+    output_image(outputDir, 0, 0);
 
     // double current_cfl_number = get_cfl_number();
     // max_cfl_number = std::max(max_cfl_number, current_cfl_number);
@@ -2400,7 +2445,7 @@ void GePUP<dim>::run()
         time += time_step;
         if (time >= time_output)
         {
-            output_image(output_image_name, timestep_number, time);
+            output_image(outputDir, timestep_number, time);
             time_output += 0.1;
         }
         // if (timestep_number % 20 == 0)
