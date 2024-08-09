@@ -1,3 +1,11 @@
+This experiment config:
+0. dataset2, n_train = 100, n_test = 60
+1. branch = mesh of t = 0s 
+2. Output = mesh of t_end = 1s
+3. Network: [*, 128, 128, *], the num of neuron middle layer is 128.
+
+
+
 2024-08-06 01:01:08.545823: I tensorflow/core/util/port.cc:113] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
 2024-08-06 01:01:09.042632: E external/local_xla/xla/stream_executor/cuda/cuda_dnn.cc:9261] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
 2024-08-06 01:01:09.042699: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:607] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered

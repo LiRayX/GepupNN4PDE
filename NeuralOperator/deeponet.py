@@ -17,11 +17,12 @@ def get_data(filename, n_train, n_test):
     Vy = data["Vy"].astype(np.float32)
     
     u = np.stack((Vx, Vy), axis=-1)  # Shape: (N, k, n_points, 2)
-    u_final = u[:, -1, :, :]  # Shape: (N, n_points, 2)
+    u_final = u[:, 2, :, :]  # Shape: (N, n_points, 2)
 
-    u_flattened = u.reshape(u.shape[0], u.shape[1], -1) #Input branch only recieves the 1D array
+    # u_flattened = u.reshape(u.shape[0], u.shape[1], -1) #Input branch only recieves the 1D array
     # Branch: initial velocity field
-    branch = u_flattened[:, 0, :]  # Shape: (N, n_points, 2)
+    branch = u[:, 0:2, :, :]  # Shape: (N, k = 0,1, n_points, 2)
+    branch = branch.reshape(branch.shape[0], -1)  # Shape: (N, 2 * n_points)
     # Trunk: spatial coordinates grid
     xy = np.vstack((np.ravel(x), np.ravel(y))).T  # N x 2 (x, y)：grid points
     
@@ -68,11 +69,11 @@ def main():
 
     # 创建两个子网络，分别生成Vx和Vy
     net_vx = dde.maps.DeepONetCartesianProd(
-        [nx * 2, 128, 128], [2, 128, 128], "relu", "Glorot normal"
+        [nx * 4, 264, 264], [2, 264, 264], "relu", "Glorot normal"
     )
 
     net_vy = dde.maps.DeepONetCartesianProd(
-        [nx * 2, 128, 128], [2, 128, 128], "relu", "Glorot normal"
+        [nx * 4, 264, 264], [2, 264, 264], "relu", "Glorot normal"
     )
 
     # 创建模型
@@ -94,8 +95,8 @@ def main():
     )
 
     # 训练模型
-    losshistory_vx, train_state_vx = model_vx.train(epochs=250000, batch_size=None)
-    losshistory_vy, train_state_vy = model_vy.train(epochs=250000, batch_size=None)
+    losshistory_vx, train_state_vx = model_vx.train(epochs=50000, batch_size=None)
+    losshistory_vy, train_state_vy = model_vy.train(epochs=50000, batch_size=None)
 
     # 预测
     y_pred_vx = model_vx.predict(data_vx.test_x)
